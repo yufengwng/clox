@@ -1,0 +1,4 @@
+*.swp
+/target
+**/*.h.gch
+Session.vim
