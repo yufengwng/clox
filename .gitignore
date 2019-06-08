@@ -1,3 +1,4 @@
+clox
 *.swp
 /target
 **/*.h.gch

@@ -1,7 +1,10 @@
-#include <stdio.h>
 #include "common.h"
+#include "chunk.h"
 
 int main(int argc, const char* argv[]) {
-    printf("hello clox!\n");
+    Chunk chunk;
+    chunk_init(&chunk);
+    chunk_write(&chunk, OP_RETURN);
+    chunk_free(&chunk);
     return 0;
 }
