@@ -4,7 +4,7 @@
 #define GROW_CAPACITY(capacity) \
     ((capacity) < 8 ? 8 : (capacity) * 2)
 
-#define GROW_ARRAY(previous, type, old_count, count) \
+#define GROW_ARRAY(type, previous, old_count, count) \
     (type*) reallocate(previous, sizeof(type) * (old_count), sizeof(type) * (count))
 
 #define FREE_ARRAY(type, pointer, old_count) \
