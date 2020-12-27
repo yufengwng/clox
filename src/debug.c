@@ -3,15 +3,6 @@
 #include "debug.h"
 #include "value.h"
 
-void disassemble_chunk(Chunk* chunk, const char* name) {
-    printf("== %s ==\n", name);
-
-    int offset = 0;
-    while (offset < chunk->count) {
-        offset = disassemble_instruction(chunk, offset);
-    }
-}
-
 static int constant_instruction(const char* name, Chunk* chunk, int offset) {
     uint8_t idx = chunk->code[offset + 1];
     printf("%-16s %4d '", name, idx);
@@ -42,5 +33,14 @@ int disassemble_instruction(Chunk* chunk, int offset) {
         default:
             printf("unknown opcode %d\n", instruction);
             return offset + 1;
+    }
+}
+
+void disassemble_chunk(Chunk* chunk, const char* name) {
+    printf("== %s ==\n", name);
+
+    int offset = 0;
+    while (offset < chunk->count) {
+        offset = disassemble_instruction(chunk, offset);
     }
 }

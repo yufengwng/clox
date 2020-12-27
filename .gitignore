@@ -1,5 +1,6 @@
-clox
 *.swp
+Session.vim
+
+clox
 /target
 **/*.h.gch
-Session.vim

@@ -3,10 +3,10 @@
 #include "common.h"
 #include "memory.h"
 
-void* reallocate(void* previous, size_t old_size, size_t new_size) {
+void* reallocate(void* prev_ptr, size_t old_size, size_t new_size) {
     if (new_size == 0) {
-        free(previous);
+        free(prev_ptr);
         return NULL;
     }
-    return realloc(previous, new_size);
+    return realloc(prev_ptr, new_size);
 }
