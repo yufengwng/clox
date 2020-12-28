@@ -6,7 +6,7 @@ int main(int argc, const char* argv[]) {
     Chunk chunk;
     chunk_init(&chunk);
 
-    int idx = chunk_add_constant(&chunk, 1.2);
+    uint8_t idx = add_constant(&chunk, 1.2);
     chunk_write(&chunk, OP_CONSTANT, 123);
     chunk_write(&chunk, idx, 123);
 
