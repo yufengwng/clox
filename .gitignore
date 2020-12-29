@@ -2,5 +2,4 @@
 Session.vim
 
 clox
-/target
-**/*.h.gch
+spec/
