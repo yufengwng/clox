@@ -15,7 +15,7 @@ typedef enum {
     TOKEN_DOT,
     TOKEN_BANG,
     TOKEN_EQUAL,
-    TOKEN_EQ,
+    TOKEN_EE,
     TOKEN_NE,
     TOKEN_LT,
     TOKEN_LE,
@@ -28,8 +28,8 @@ typedef enum {
 
     // Literals.
     TOKEN_IDENT,
-    TOKEN_NUMBER,
-    TOKEN_STRING,
+    TOKEN_NUM,
+    TOKEN_STR,
 
     // Keywords.
     TOKEN_AND,
