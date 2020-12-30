@@ -9,19 +9,35 @@ static void stack_reset() {
     vm.stack_top = vm.stack;
 }
 
-static InterpretResult run() {
-#define READ_BYTE() (*vm.ip++)
-#define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
-
-    while (true) {
 #ifdef DEBUG_TRACE_EXECUTION
-        printf("---- ");
+static void print_stack() {
+    printf("---- ");
+    if (vm.stack_top == vm.stack) {
+        printf("[ ]");
+    } else {
         for (Value* curr = vm.stack; curr < vm.stack_top; curr++) {
             printf("[ ");
             print_value(*curr);
             printf(" ]");
         }
-        printf("\n");
+    }
+    printf("\n");
+}
+#endif
+
+static InterpretResult run() {
+#define READ_BYTE() (*vm.ip++)
+#define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define BINARY_OP(op) \
+    do { \
+        Value b = stack_pop(); \
+        Value a = stack_pop(); \
+        stack_push(a op b); \
+    } while (false)
+
+    while (true) {
+#ifdef DEBUG_TRACE_EXECUTION
+        print_stack();
         disassemble_instruction(vm.chunk, (int)(vm.ip - vm.chunk->code));
 #endif
         uint8_t instruction = READ_BYTE();
@@ -29,8 +45,16 @@ static InterpretResult run() {
             case OP_RETURN: {
                 print_value(stack_pop());
                 printf("\n");
+#ifdef DEBUG_TRACE_EXECUTION
+                print_stack();
+#endif
                 return INTERPRET_OK;
             }
+            case OP_ADD:        BINARY_OP(+); break;
+            case OP_SUBTRACT:   BINARY_OP(-); break;
+            case OP_MULTIPLY:   BINARY_OP(*); break;
+            case OP_DIVIDE:     BINARY_OP(/); break;
+            case OP_NEGATE:     stack_push(-stack_pop()); break;
             case OP_CONSTANT: {
                 Value constant = READ_CONSTANT();
                 stack_push(constant);
@@ -39,6 +63,7 @@ static InterpretResult run() {
         }
     }
 
+#undef BINARY_OP
 #undef READ_CONSTANT
 #undef READ_BYTE
 }
