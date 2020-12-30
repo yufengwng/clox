@@ -3,7 +3,7 @@
 #include "common.h"
 #include "value.h"
 
-#define MAX_CONSTANTS_PER_CHUNK ((size_t) 256)
+#define MAX_CONSTANTS 256
 
 typedef enum {
     OP_CONSTANT,

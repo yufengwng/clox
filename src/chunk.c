@@ -32,8 +32,8 @@ void chunk_write(Chunk* chunk, uint8_t byte, size_t line) {
 }
 
 uint8_t add_constant(Chunk* chunk, Value value) {
-    if (chunk->constants.count >= MAX_CONSTANTS_PER_CHUNK) {
-        fprintf(stderr, "[lox] error: cannot have more than %zu constants in chunk\n", MAX_CONSTANTS_PER_CHUNK);
+    if (chunk->constants.count >= MAX_CONSTANTS) {
+        fprintf(stderr, "[lox] error: cannot have more than %d constants in chunk\n", MAX_CONSTANTS);
         exit(1);
     }
     varr_write(&chunk->constants, value);
