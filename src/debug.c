@@ -37,7 +37,7 @@ int disassemble_instruction(Chunk* chunk, size_t offset) {
 }
 
 void disassemble_chunk(Chunk* chunk, const char* name) {
-    printf("== %s ==\n", name);
+    printf("=== %s ===\n", name);
 
     size_t offset = 0;
     while (offset < chunk->count) {
