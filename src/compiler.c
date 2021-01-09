@@ -163,7 +163,7 @@ static void unary() {
 
 static void number() {
     double value = strtod(parser.previous.start, NULL);
-    emit_constant(value);
+    emit_constant(BOX_NUMBER(value));
 }
 
 static void grouping() {

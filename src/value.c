@@ -25,5 +25,5 @@ void varr_write(ValueArray* array, Value value) {
 }
 
 void print_value(Value value) {
-    printf("%g", value);
+    printf("%g", RAW_NUMBER(value));
 }
