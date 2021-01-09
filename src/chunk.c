@@ -31,11 +31,7 @@ void chunk_write(Chunk* chunk, uint8_t byte, size_t line) {
     chunk->count++;
 }
 
-uint8_t add_constant(Chunk* chunk, Value value) {
-    if (chunk->constants.count >= CONSTANTS_MAX) {
-        fprintf(stderr, "[lox] error: cannot have more than %d constants in chunk\n", CONSTANTS_MAX);
-        exit(1);
-    }
+size_t add_constant(Chunk* chunk, Value value) {
     varr_write(&chunk->constants, value);
     return chunk->constants.count - 1;
 }

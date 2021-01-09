@@ -12,7 +12,6 @@ static void stack_reset() {
 
 #ifdef DEBUG_TRACE_EXECUTION
 static void print_stack() {
-    printf("---- ");
     if (vm.stack_top == vm.stack) {
         printf("[ ]");
     } else {
@@ -46,9 +45,6 @@ static InterpretResult run() {
             case OP_RETURN: {
                 print_value(stack_pop());
                 printf("\n");
-#ifdef DEBUG_TRACE_EXECUTION
-                print_stack();
-#endif
                 return INTERPRET_OK;
             }
             case OP_ADD:        BINARY_OP(+); break;
@@ -77,8 +73,20 @@ void vm_free() {
 }
 
 InterpretResult vm_interpret(const char* source) {
-    compile(source);
-    return INTERPRET_OK;
+    Chunk chunk;
+    chunk_init(&chunk);
+
+    if (!compile(source, &chunk)) {
+        chunk_free(&chunk);
+        return INTERPRET_COMPILE_ERROR;
+    }
+
+    vm.chunk = &chunk;
+    vm.ip = vm.chunk->code;
+    InterpretResult result = run();
+
+    chunk_free(&chunk);
+    return result;
 }
 
 void stack_push(Value value) {
