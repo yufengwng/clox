@@ -1,6 +1,8 @@
 #include <stdio.h>
+#include <string.h>
 
 #include "memory.h"
+#include "object.h"
 #include "value.h"
 
 void varr_init(ValueArray* array) {
@@ -32,6 +34,12 @@ bool values_equal(Value a, Value b) {
         case VAL_NIL:       return true;
         case VAL_BOOL:      return RAW_BOOL(a) == RAW_BOOL(b);
         case VAL_NUMBER:    return RAW_NUMBER(a) == RAW_NUMBER(b);
+        case VAL_OBJ: {
+            ObjString* str_a = RAW_STRING(a);
+            ObjString* str_b = RAW_STRING(b);
+            return str_a->length == str_b->length
+                && memcmp(str_a->chars, str_b->chars, str_a->length) == 0;
+        }
         default:            return false; // Unreachable.
     }
 }
@@ -46,6 +54,9 @@ void print_value(Value value) {
             break;
         case VAL_NUMBER:
             printf("%g", RAW_NUMBER(value));
+            break;
+        case VAL_OBJ:
+            print_object(value);
             break;
     }
 }

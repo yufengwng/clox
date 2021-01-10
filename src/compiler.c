@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "common.h"
 #include "compiler.h"
 #include "scanner.h"
+#include "object.h"
 #include "value.h"
 
 #ifdef DEBUG_PRINT_CODE
@@ -21,7 +21,7 @@ typedef enum {
     PREC_FACTOR,        // * /
     PREC_UNARY,         // - !
     PREC_CALL,          // . ()
-    PREC_PRIMARY
+    PREC_PRIMARY,
 } Precedence;
 
 typedef void (*ParseFn)();
@@ -173,6 +173,11 @@ static void number() {
     emit_constant(BOX_NUMBER(value));
 }
 
+static void string() {
+    size_t length = parser.previous.length - 2;
+    emit_constant(BOX_OBJ(copy_string(parser.previous.start + 1, length)));
+}
+
 static void literal() {
     switch (parser.previous.type) {
         case TOKEN_NIL:   emit_byte(OP_NIL); break;
@@ -231,7 +236,7 @@ ParseRule rules[] = {
     [TOKEN_STAR]   = {NULL,     binary, PREC_FACTOR},
     [TOKEN_SLASH]  = {NULL,     binary, PREC_FACTOR},
     [TOKEN_IDENT]  = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_STR]    = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_STR]    = {string,   NULL,   PREC_NONE},
     [TOKEN_NUM]    = {number,   NULL,   PREC_NONE},
     [TOKEN_AND]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_CLASS]  = {NULL,     NULL,   PREC_NONE},

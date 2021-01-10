@@ -1,9 +1,15 @@
 #include <stdarg.h>
 #include <stdio.h>
+#include <string.h>
 
-#include "compiler.h"
-#include "debug.h"
 #include "vm.h"
+#include "compiler.h"
+#include "memory.h"
+#include "object.h"
+
+#ifdef DEBUG_TRACE_EXECUTION
+#include "debug.h"
+#endif
 
 VM vm;  // singleton
 
@@ -27,6 +33,20 @@ static Value stack_peek(size_t distance) {
 
 static bool is_falsey(Value value) {
     return IS_NIL(value) || (IS_BOOL(value) && !RAW_BOOL(value));
+}
+
+static void concatenate() {
+    ObjString* b = RAW_STRING(stack_pop());
+    ObjString* a = RAW_STRING(stack_pop());
+
+    size_t length = a->length + b->length;
+    char* chars = ALLOCATE(char, length + 1);
+    memcpy(chars, a->chars, a->length);
+    memcpy(chars + a->length, b->chars, b->length);
+    chars[length] = '\0';
+
+    ObjString* result = take_string(chars, length);
+    stack_push(BOX_OBJ(result));
 }
 
 static void runtime_error(const char* format, ...) {
@@ -95,7 +115,21 @@ static InterpretResult run() {
             }
             case OP_LESS:       BINARY_OP(BOX_BOOL, <); break;
             case OP_GREATER:    BINARY_OP(BOX_BOOL, >); break;
-            case OP_ADD:        BINARY_OP(BOX_NUMBER, +); break;
+            case OP_ADD: {
+                Value peek_b = stack_peek(0);
+                Value peek_a = stack_peek(1);
+                if (IS_STRING(peek_b) && IS_STRING(peek_a)) {
+                    concatenate();
+                } else if (IS_NUMBER(peek_b) && IS_NUMBER(peek_a)) {
+                    double b = RAW_NUMBER(stack_pop());
+                    double a = RAW_NUMBER(stack_pop());
+                    stack_push(BOX_NUMBER(a + b));
+                } else {
+                    runtime_error("Operands must be two numbers or two strings.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
             case OP_SUBTRACT:   BINARY_OP(BOX_NUMBER, -); break;
             case OP_MULTIPLY:   BINARY_OP(BOX_NUMBER, *); break;
             case OP_DIVIDE:     BINARY_OP(BOX_NUMBER, /); break;
@@ -124,9 +158,11 @@ static InterpretResult run() {
 
 void vm_init() {
     stack_reset();
+    vm.objects = NULL;
 }
 
 void vm_free() {
+    free_objects();
 }
 
 InterpretResult vm_interpret(const char* source) {
