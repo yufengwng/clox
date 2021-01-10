@@ -37,4 +37,5 @@ void varr_init(ValueArray* array);
 void varr_free(ValueArray* array);
 void varr_write(ValueArray* array, Value value);
 
+bool values_equal(Value a, Value b);
 void print_value(Value value);

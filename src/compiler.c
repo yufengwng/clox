@@ -111,9 +111,9 @@ static void emit_byte(uint8_t opcode) {
     chunk_write(current_chunk(), opcode, parser.previous.line);
 }
 
-static void emit_bytes(uint8_t opcode, uint8_t operand) {
-    emit_byte(opcode);
-    emit_byte(operand);
+static void emit_bytes(uint8_t byte1, uint8_t byte2) {
+    emit_byte(byte1);
+    emit_byte(byte2);
 }
 
 static void emit_constant(Value value) {
@@ -140,6 +140,12 @@ static void binary() {
     parse_precedence((Precedence)(rule->precedence + 1));
 
     switch (op_type) {
+        case TOKEN_NE:      emit_bytes(OP_EQUAL, OP_NOT); break;
+        case TOKEN_EE:      emit_byte(OP_EQUAL); break;
+        case TOKEN_LT:      emit_byte(OP_LESS); break;
+        case TOKEN_LE:      emit_bytes(OP_GREATER, OP_NOT); break;
+        case TOKEN_GT:      emit_byte(OP_GREATER); break;
+        case TOKEN_GE:      emit_bytes(OP_LESS, OP_NOT); break;
         case TOKEN_PLUS:    emit_byte(OP_ADD); break;
         case TOKEN_MINUS:   emit_byte(OP_SUBTRACT); break;
         case TOKEN_STAR:    emit_byte(OP_MULTIPLY); break;
@@ -155,6 +161,7 @@ static void unary() {
     parse_precedence(PREC_UNARY);
 
     switch (op_type) {
+        case TOKEN_BANG:  emit_byte(OP_NOT); break;
         case TOKEN_MINUS: emit_byte(OP_NEGATE); break;
         default:
             return; // Unreachable.
@@ -164,6 +171,16 @@ static void unary() {
 static void number() {
     double value = strtod(parser.previous.start, NULL);
     emit_constant(BOX_NUMBER(value));
+}
+
+static void literal() {
+    switch (parser.previous.type) {
+        case TOKEN_NIL:   emit_byte(OP_NIL); break;
+        case TOKEN_TRUE:  emit_byte(OP_TRUE); break;
+        case TOKEN_FALSE: emit_byte(OP_FALSE); break;
+        default:
+            return; // Unreachable.
+    }
 }
 
 static void grouping() {
@@ -201,14 +218,14 @@ ParseRule rules[] = {
     [TOKEN_COMMA]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SEMI]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_DOT]    = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_BANG]   = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_BANG]   = {unary,    NULL,   PREC_NONE},
     [TOKEN_EQUAL]  = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_NE]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_EE]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_LT]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_LE]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_GT]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_GE]     = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NE]     = {NULL,     binary, PREC_EQUALITY},
+    [TOKEN_EE]     = {NULL,     binary, PREC_EQUALITY},
+    [TOKEN_LT]     = {NULL,     binary, PREC_COMPARISON},
+    [TOKEN_LE]     = {NULL,     binary, PREC_COMPARISON},
+    [TOKEN_GT]     = {NULL,     binary, PREC_COMPARISON},
+    [TOKEN_GE]     = {NULL,     binary, PREC_COMPARISON},
     [TOKEN_PLUS]   = {NULL,     binary, PREC_TERM},
     [TOKEN_MINUS]  = {unary,    binary, PREC_TERM},
     [TOKEN_STAR]   = {NULL,     binary, PREC_FACTOR},
@@ -219,17 +236,17 @@ ParseRule rules[] = {
     [TOKEN_AND]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_CLASS]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]   = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_FALSE]  = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_FALSE]  = {literal,  NULL,   PREC_NONE},
     [TOKEN_FOR]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FUN]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_IF]     = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_NIL]    = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_NIL]    = {literal,  NULL,   PREC_NONE},
     [TOKEN_OR]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_PRINT]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN] = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_THIS]   = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_TRUE]   = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_TRUE]   = {literal,  NULL,   PREC_NONE},
     [TOKEN_VAR]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_WHILE]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ERR]    = {NULL,     NULL,   PREC_NONE},

@@ -25,6 +25,10 @@ static Value stack_peek(size_t distance) {
     return vm.stack_top[-1 - distance];
 }
 
+static bool is_falsey(Value value) {
+    return IS_NIL(value) || (IS_BOOL(value) && !RAW_BOOL(value));
+}
+
 static void runtime_error(const char* format, ...) {
     va_list args;
     va_start(args, format);
@@ -75,11 +79,22 @@ static InterpretResult run() {
 #endif
         uint8_t instruction = READ_BYTE();
         switch (instruction) {
-            case OP_RETURN: {
-                print_value(stack_pop());
-                printf("\n");
-                return INTERPRET_OK;
+            case OP_CONSTANT: {
+                Value constant = READ_CONSTANT();
+                stack_push(constant);
+                break;
             }
+            case OP_NIL:    stack_push(BOX_NIL); break;
+            case OP_TRUE:   stack_push(BOX_BOOL(true)); break;
+            case OP_FALSE:  stack_push(BOX_BOOL(false)); break;
+            case OP_EQUAL: {
+                Value b = stack_pop();
+                Value a = stack_pop();
+                stack_push(BOX_BOOL(values_equal(a, b)));
+                break;
+            }
+            case OP_LESS:       BINARY_OP(BOX_BOOL, <); break;
+            case OP_GREATER:    BINARY_OP(BOX_BOOL, >); break;
             case OP_ADD:        BINARY_OP(BOX_NUMBER, +); break;
             case OP_SUBTRACT:   BINARY_OP(BOX_NUMBER, -); break;
             case OP_MULTIPLY:   BINARY_OP(BOX_NUMBER, *); break;
@@ -91,10 +106,13 @@ static InterpretResult run() {
                 }
                 stack_push(BOX_NUMBER(-RAW_NUMBER(stack_pop())));
                 break;
-            case OP_CONSTANT: {
-                Value constant = READ_CONSTANT();
-                stack_push(constant);
+            case OP_NOT:
+                stack_push(BOX_BOOL(is_falsey(stack_pop())));
                 break;
+            case OP_RETURN: {
+                print_value(stack_pop());
+                printf("\n");
+                return INTERPRET_OK;
             }
         }
     }
