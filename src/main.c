@@ -25,7 +25,7 @@ static char* read_file(const char* path) {
     size_t file_size = ftell(file);
     rewind(file);
 
-    char* buffer = (char*) malloc(file_size + 1);
+    char* buffer = (char*)malloc(file_size + 1);
     if (buffer == NULL) {
         fprintf(stderr, "[lox] error: not enough memory to read '%s'\n", path);
         exit(ERR_IOERR);
@@ -67,7 +67,7 @@ static void run_repl() {
 }
 
 int main(int argc, const char* argv[]) {
-    vm_init();
+    init_vm();
 
     if (argc == 1) {
         run_repl();
@@ -78,6 +78,6 @@ int main(int argc, const char* argv[]) {
         exit(ERR_USAGE);
     }
 
-    vm_free();
+    free_vm();
     return 0;
 }

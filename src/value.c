@@ -5,15 +5,15 @@
 #include "object.h"
 #include "value.h"
 
-void varr_init(ValueArray* array) {
-    array->values = NULL;
-    array->capacity = 0;
+void init_varr(ValueArray* array) {
     array->count = 0;
+    array->capacity = 0;
+    array->values = NULL;
 }
 
-void varr_free(ValueArray* array) {
+void free_varr(ValueArray* array) {
     FREE_ARRAY(Value, array->values, array->capacity);
-    varr_init(array);
+    init_varr(array);
 }
 
 void varr_write(ValueArray* array, Value value) {

@@ -156,21 +156,21 @@ static InterpretResult run() {
 #undef READ_BYTE
 }
 
-void vm_init() {
+void init_vm() {
     stack_reset();
     vm.objects = NULL;
 }
 
-void vm_free() {
+void free_vm() {
     free_objects();
 }
 
 InterpretResult vm_interpret(const char* source) {
     Chunk chunk;
-    chunk_init(&chunk);
+    init_chunk(&chunk);
 
     if (!compile(source, &chunk)) {
-        chunk_free(&chunk);
+        free_chunk(&chunk);
         return INTERPRET_COMPILE_ERROR;
     }
 
@@ -178,6 +178,6 @@ InterpretResult vm_interpret(const char* source) {
     vm.ip = vm.chunk->code;
     InterpretResult result = run();
 
-    chunk_free(&chunk);
+    free_chunk(&chunk);
     return result;
 }

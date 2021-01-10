@@ -263,7 +263,7 @@ static ParseRule* get_rule(TokenType type) {
 }
 
 bool compile(const char* source, Chunk* chunk) {
-    scanner_init(source);
+    init_scanner(source);
     compiling_chunk = chunk;
     parser.had_error = false;
     parser.panic_mode = false;

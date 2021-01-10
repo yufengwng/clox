@@ -4,19 +4,19 @@
 #include "chunk.h"
 #include "memory.h"
 
-void chunk_init(Chunk* chunk) {
+void init_chunk(Chunk* chunk) {
     chunk->count = 0;
     chunk->capacity = 0;
     chunk->code = NULL;
     chunk->lines = NULL;
-    varr_init(&chunk->constants);
+    init_varr(&chunk->constants);
 }
 
-void chunk_free(Chunk* chunk) {
+void free_chunk(Chunk* chunk) {
     FREE_ARRAY(uint8_t, chunk->code, chunk->capacity);
     FREE_ARRAY(size_t, chunk->lines, chunk->capacity);
-    varr_free(&chunk->constants);
-    chunk_init(chunk);
+    free_varr(&chunk->constants);
+    init_chunk(chunk);
 }
 
 void chunk_write(Chunk* chunk, uint8_t byte, size_t line) {

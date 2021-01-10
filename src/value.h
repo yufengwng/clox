@@ -36,13 +36,13 @@ typedef struct {
 #define RAW_OBJ(value)    ((value).as.obj)
 
 typedef struct {
-    Value* values;
-    size_t capacity;
     size_t count;
+    size_t capacity;
+    Value* values;
 } ValueArray;
 
-void varr_init(ValueArray* array);
-void varr_free(ValueArray* array);
+void init_varr(ValueArray* array);
+void free_varr(ValueArray* array);
 void varr_write(ValueArray* array, Value value);
 
 bool values_equal(Value a, Value b);
