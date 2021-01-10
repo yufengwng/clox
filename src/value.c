@@ -34,12 +34,7 @@ bool values_equal(Value a, Value b) {
         case VAL_NIL:       return true;
         case VAL_BOOL:      return RAW_BOOL(a) == RAW_BOOL(b);
         case VAL_NUMBER:    return RAW_NUMBER(a) == RAW_NUMBER(b);
-        case VAL_OBJ: {
-            ObjString* str_a = RAW_STRING(a);
-            ObjString* str_b = RAW_STRING(b);
-            return str_a->length == str_b->length
-                && memcmp(str_a->chars, str_b->chars, str_a->length) == 0;
-        }
+        case VAL_OBJ:       return RAW_OBJ(a) == RAW_OBJ(b);
         default:            return false; // Unreachable.
     }
 }

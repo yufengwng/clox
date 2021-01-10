@@ -16,6 +16,7 @@ struct ObjString {
     Obj obj;
     size_t length;
     char* chars;
+    size_t hash;
 };
 
 #define OBJ_TYPE(value)    (RAW_OBJ(value)->type)
