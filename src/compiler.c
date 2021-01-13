@@ -34,6 +34,8 @@ typedef struct {
 
 // forward declarations
 static void expression();
+static void statement();
+static void declaration();
 static ParseRule* get_rule(TokenType type);
 static void parse_precedence(Precedence precedence);
 
@@ -96,6 +98,19 @@ static void consume(TokenType type, const char* message) {
         return;
     }
     error_at_current(message);
+}
+
+static bool check(TokenType type) {
+    return parser.current.type == type;
+}
+
+static bool match(TokenType type) {
+    if (check(type)) {
+        advance();
+        return true;
+    } else {
+        return false;
+    }
 }
 
 static uint8_t make_constant(Value value) {
@@ -197,6 +212,56 @@ static void expression() {
     parse_precedence(PREC_ASSIGNMENT);
 }
 
+static void expression_statement() {
+    expression();
+    consume(TOKEN_SEMI, "Expect ';' after expression.");
+    emit_byte(OP_POP);
+}
+
+static void print_statement() {
+    expression();
+    consume(TOKEN_SEMI, "Expect ';' after value.");
+    emit_byte(OP_PRINT);
+}
+
+static void synchronize() {
+    parser.panic_mode = false;
+    while (parser.current.type != TOKEN_EOF) {
+        if (parser.previous.type == TOKEN_SEMI) {
+            return;
+        }
+        switch (parser.current.type) {
+            case TOKEN_CLASS:
+            case TOKEN_FUN:
+            case TOKEN_VAR:
+            case TOKEN_FOR:
+            case TOKEN_IF:
+            case TOKEN_WHILE:
+            case TOKEN_PRINT:
+            case TOKEN_RETURN:
+                return;
+            default:
+                ; // nothing to do
+        }
+        advance();
+    }
+}
+
+static void statement() {
+    if (match(TOKEN_PRINT)) {
+        print_statement();
+    } else {
+        expression_statement();
+    }
+}
+
+static void declaration() {
+    statement();
+    if (parser.panic_mode) {
+        synchronize();
+    }
+}
+
 static void parse_precedence(Precedence precedence) {
     advance();
     ParseFn prefix_rule = get_rule(parser.previous.type)->prefix;
@@ -269,7 +334,9 @@ bool compile(const char* source, Chunk* chunk) {
     parser.panic_mode = false;
 
     advance();
-    expression();
+    while (!match(TOKEN_EOF)) {
+        declaration();
+    }
     consume(TOKEN_EOF, "Expect end of expression.");
     end_compiler();
 

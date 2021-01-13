@@ -143,9 +143,15 @@ static InterpretResult run() {
             case OP_NOT:
                 stack_push(BOX_BOOL(is_falsey(stack_pop())));
                 break;
-            case OP_RETURN: {
+            case OP_POP:
+                stack_pop();
+                break;
+            case OP_PRINT: {
                 print_value(stack_pop());
                 printf("\n");
+                break;
+            }
+            case OP_RETURN: {
                 return INTERPRET_OK;
             }
         }

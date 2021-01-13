@@ -17,6 +17,8 @@ typedef enum {
     OP_DIVIDE,
     OP_NEGATE,
     OP_NOT,
+    OP_POP,
+    OP_PRINT,
     OP_RETURN,
 } OpCode;
 
