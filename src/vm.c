@@ -81,6 +81,7 @@ static void print_stack() {
 static InterpretResult run() {
 #define READ_BYTE() (*vm.ip++)
 #define READ_CONSTANT() (vm.chunk->constants.values[READ_BYTE()])
+#define READ_STRING() RAW_STRING(READ_CONSTANT())
 #define BINARY_OP(value_type, op) \
     do { \
         if (!IS_NUMBER(stack_peek(0)) || !IS_NUMBER(stack_peek(1))) { \
@@ -107,6 +108,32 @@ static InterpretResult run() {
             case OP_NIL:    stack_push(BOX_NIL); break;
             case OP_TRUE:   stack_push(BOX_BOOL(true)); break;
             case OP_FALSE:  stack_push(BOX_BOOL(false)); break;
+            case OP_POP:    stack_pop(); break;
+            case OP_DEFINE_GLOBAL: {
+                ObjString* name = READ_STRING();
+                table_set(&vm.globals, name, stack_peek(0));
+                stack_pop();
+                break;
+            }
+            case OP_SET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                if (table_set(&vm.globals, name, stack_peek(0))) {
+                    table_delete(&vm.globals, name);
+                    runtime_error("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                break;
+            }
+            case OP_GET_GLOBAL: {
+                ObjString* name = READ_STRING();
+                Value value;
+                if (!table_get(&vm.globals, name, &value)) {
+                    runtime_error("Undefined variable '%s'.", name->chars);
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                stack_push(value);
+                break;
+            }
             case OP_EQUAL: {
                 Value b = stack_pop();
                 Value a = stack_pop();
@@ -143,9 +170,6 @@ static InterpretResult run() {
             case OP_NOT:
                 stack_push(BOX_BOOL(is_falsey(stack_pop())));
                 break;
-            case OP_POP:
-                stack_pop();
-                break;
             case OP_PRINT: {
                 print_value(stack_pop());
                 printf("\n");
@@ -158,6 +182,7 @@ static InterpretResult run() {
     }
 
 #undef BINARY_OP
+#undef READ_STRING
 #undef READ_CONSTANT
 #undef READ_BYTE
 }
@@ -166,9 +191,11 @@ void init_vm() {
     stack_reset();
     vm.objects = NULL;
     init_table(&vm.strings);
+    init_table(&vm.globals);
 }
 
 void free_vm() {
+    free_table(&vm.globals);
     free_table(&vm.strings);
     free_objects();
 }
