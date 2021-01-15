@@ -3,7 +3,7 @@
 #include "debug.h"
 #include "value.h"
 
-static int constant_instruction(const char* name, Chunk* chunk, size_t offset) {
+static size_t constant_instruction(const char* name, Chunk* chunk, size_t offset) {
     uint8_t idx = chunk->code[offset + 1];
     printf("%-16s %4d '", name, idx);
     print_value(chunk->constants.values[idx]);
@@ -11,7 +11,13 @@ static int constant_instruction(const char* name, Chunk* chunk, size_t offset) {
     return offset + 2;
 }
 
-static int simple_instruction(const char* name, size_t offset) {
+static size_t byte_instruction(const char* name, Chunk* chunk, size_t offset) {
+    uint8_t slot = chunk->code[offset + 1];
+    printf("%-16s %4d\n", name, slot);
+    return offset + 2;
+}
+
+static size_t simple_instruction(const char* name, size_t offset) {
     printf("%s\n", name);
     return offset + 1;
 }
@@ -42,6 +48,10 @@ int disassemble_instruction(Chunk* chunk, size_t offset) {
             return constant_instruction("OP_SET_GLOBAL", chunk, offset);
         case OP_GET_GLOBAL:
             return constant_instruction("OP_GET_GLOBAL", chunk, offset);
+        case OP_SET_LOCAL:
+            return byte_instruction("OP_SET_LOCAL", chunk, offset);
+        case OP_GET_LOCAL:
+            return byte_instruction("OP_GET_LOCAL", chunk, offset);
         case OP_EQUAL:
             return simple_instruction("OP_EQUAL", offset);
         case OP_LESS:

@@ -134,6 +134,16 @@ static InterpretResult run() {
                 stack_push(value);
                 break;
             }
+            case OP_SET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                vm.stack[slot] = stack_peek(0);
+                break;
+            }
+            case OP_GET_LOCAL: {
+                uint8_t slot = READ_BYTE();
+                stack_push(vm.stack[slot]);
+                break;
+            }
             case OP_EQUAL: {
                 Value b = stack_pop();
                 Value a = stack_pop();
