@@ -62,7 +62,7 @@ ObjString* take_string(char* chars, size_t length) {
 void print_object(Value value) {
     switch (OBJ_TYPE(value)) {
         case OBJ_STRING:
-            printf("\"%s\"", RAW_CSTRING(value));
+            printf("%s", RAW_CSTRING(value));
             break;
     }
 }

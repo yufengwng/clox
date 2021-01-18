@@ -59,6 +59,7 @@ Compiler* current = NULL;
 static void expression();
 static void statement();
 static void declaration();
+static void var_declaration();
 static ParseRule* get_rule(TokenType type);
 static void parse_precedence(Precedence precedence);
 
@@ -155,6 +156,34 @@ static void emit_constant(Value value) {
 
 static void emit_return() {
     emit_byte(OP_RETURN);
+}
+
+static size_t emit_loop(size_t loop_start) {
+    emit_byte(OP_LOOP);
+
+    size_t offset = current_chunk()->count - loop_start + 2;
+    if (offset > UINT16_MAX) {
+        error("Loop body too large.");
+    }
+
+    emit_byte((offset >> 8) & 0xff);
+    emit_byte(offset & 0xff);
+}
+
+static size_t emit_jump(uint8_t instruction) {
+    emit_byte(instruction);
+    emit_byte(0xff);
+    emit_byte(0xff);
+    return current_chunk()->count - 2;
+}
+
+static void patch_jump(size_t offset) {
+    size_t jump = current_chunk()->count - offset - 2;
+    if (jump > UINT16_MAX) {
+        error("Too much code to jump over.");
+    }
+    current_chunk()->code[offset] = (jump >> 8) & 0xff;
+    current_chunk()->code[offset + 1] = jump & 0xff;
 }
 
 static void begin_scope() {
@@ -330,6 +359,26 @@ static void literal(bool can_assign) {
     }
 }
 
+static void log_and(bool can_assign) {
+    size_t end_jump = emit_jump(OP_JUMP_IF_FALSE);
+
+    emit_byte(OP_POP);
+    parse_precedence(PREC_AND);
+
+    patch_jump(end_jump);
+}
+
+static void log_or(bool can_assign) {
+    size_t else_jump = emit_jump(OP_JUMP_IF_FALSE);
+    size_t end_jump = emit_jump(OP_JUMP);
+
+    patch_jump(else_jump);
+    emit_byte(OP_POP);
+    parse_precedence(PREC_OR);
+
+    patch_jump(end_jump);
+}
+
 static void grouping(bool can_assign) {
     expression();
     consume(TOKEN_RPAREN, "Expect ')' after expression.");
@@ -358,6 +407,84 @@ static void print_statement() {
     emit_byte(OP_PRINT);
 }
 
+static void if_statement() {
+    consume(TOKEN_LPAREN, "Expect '(' after 'if'.");
+    expression();
+    consume(TOKEN_RPAREN, "Expect ')' after condition.");
+
+    size_t then_jump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
+    statement();
+    size_t else_jump = emit_jump(OP_JUMP);
+    patch_jump(then_jump);
+
+    emit_byte(OP_POP);
+    if (match(TOKEN_ELSE)) {
+        statement();
+    }
+    patch_jump(else_jump);
+}
+
+static void while_statement() {
+    size_t loop_start = current_chunk()->count;
+
+    consume(TOKEN_LPAREN, "Expect '(' after 'while'.");
+    expression();
+    consume(TOKEN_RPAREN, "Expect ')' after condition.");
+
+    size_t exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+    emit_byte(OP_POP);
+    statement();
+    emit_loop(loop_start);
+
+    patch_jump(exit_jump);
+    emit_byte(OP_POP);
+}
+
+static void for_statement() {
+    begin_scope();
+
+    consume(TOKEN_LPAREN, "Expect '(' after 'for'.");
+    if (match(TOKEN_SEMI)) {
+        // no initializer
+    } else if (match(TOKEN_VAR)) {
+        var_declaration();
+    } else {
+        expression_statement();
+    }
+
+    size_t loop_start = current_chunk()->count;
+    int exit_jump = -1;
+    if (!match(TOKEN_SEMI)) {
+        expression();
+        consume(TOKEN_SEMI, "Expect ';' after loop condition.");
+        exit_jump = emit_jump(OP_JUMP_IF_FALSE);
+        emit_byte(OP_POP);
+    }
+
+    if (!match(TOKEN_RPAREN)) {
+        size_t body_jump = emit_jump(OP_JUMP);
+        size_t increment_start = current_chunk()->count;
+
+        expression();
+        emit_byte(OP_POP);
+        consume(TOKEN_RPAREN, "Expect ')' after for clauses.");
+
+        emit_loop(loop_start);
+        loop_start = increment_start;
+        patch_jump(body_jump);
+    }
+
+    statement();
+    emit_loop(loop_start);
+    if (exit_jump != -1) {
+        patch_jump(exit_jump);
+        emit_byte(OP_POP);
+    }
+
+    end_scope();
+}
+
 static void synchronize() {
     parser.panic_mode = false;
     while (parser.current.type != TOKEN_EOF) {
@@ -384,6 +511,12 @@ static void synchronize() {
 static void statement() {
     if (match(TOKEN_PRINT)) {
         print_statement();
+    } else if (match(TOKEN_IF)) {
+        if_statement();
+    } else if (match(TOKEN_WHILE)) {
+        while_statement();
+    } else if (match(TOKEN_FOR)) {
+        for_statement();
     } else if (match(TOKEN_LBRACE)) {
         begin_scope();
         block();
@@ -462,7 +595,7 @@ ParseRule rules[] = {
     [TOKEN_IDENT]  = {variable, NULL,   PREC_NONE},
     [TOKEN_STR]    = {string,   NULL,   PREC_NONE},
     [TOKEN_NUM]    = {number,   NULL,   PREC_NONE},
-    [TOKEN_AND]    = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_AND]    = {NULL,     log_and,PREC_AND},
     [TOKEN_CLASS]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_ELSE]   = {NULL,     NULL,   PREC_NONE},
     [TOKEN_FALSE]  = {literal,  NULL,   PREC_NONE},
@@ -470,7 +603,7 @@ ParseRule rules[] = {
     [TOKEN_FUN]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_IF]     = {NULL,     NULL,   PREC_NONE},
     [TOKEN_NIL]    = {literal,  NULL,   PREC_NONE},
-    [TOKEN_OR]     = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_OR]     = {NULL,     log_or, PREC_OR},
     [TOKEN_PRINT]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN] = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]  = {NULL,     NULL,   PREC_NONE},
