@@ -1,6 +1,6 @@
 #pragma once
 
 #include "common.h"
-#include "chunk.h"
+#include "object.h"
 
-bool compile(const char* source, Chunk* chunk);
+ObjFunction* compile(const char* source);
