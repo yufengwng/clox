@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
 
 #include "vm.h"
 #include "compiler.h"
@@ -72,6 +73,14 @@ static void runtime_error(const char* format, ...) {
     stack_reset();
 }
 
+static void define_native(const char* name, NativeFn function) {
+    stack_push(BOX_OBJ(copy_string(name, strlen(name))));
+    stack_push(BOX_OBJ(new_native(function)));
+    table_set(&vm.globals, RAW_STRING(vm.stack[0]), vm.stack[1]);
+    stack_pop();
+    stack_pop();
+}
+
 static bool call(ObjFunction* function, size_t arg_count) {
     if (arg_count != function->arity) {
         runtime_error("Expected %zu arguments but got %zu.", function->arity, arg_count);
@@ -95,6 +104,13 @@ static bool call_value(Value callee, size_t arg_count) {
         switch (OBJ_TYPE(callee)) {
             case OBJ_FUNCTION:
                 return call(RAW_FUNCTION(callee), arg_count);
+            case OBJ_NATIVE: {
+                NativeFn native = RAW_NATIVE(callee);
+                Value result = native(arg_count, vm.stack_top - arg_count);
+                vm.stack_top -= arg_count + 1;
+                stack_push(result);
+                return true;
+            }
             default:
                 break; // Non-callable object type.
         }
@@ -280,11 +296,16 @@ static InterpretResult run() {
 #undef READ_BYTE
 }
 
+static Value clock_native(size_t arg_count, Value* args) {
+    return BOX_NUMBER((double)clock() / CLOCKS_PER_SEC);
+}
+
 void init_vm() {
     stack_reset();
     vm.objects = NULL;
     init_table(&vm.strings);
     init_table(&vm.globals);
+    define_native("clock", clock_native);
 }
 
 void free_vm() {
