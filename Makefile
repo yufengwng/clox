@@ -1,8 +1,11 @@
-.PHONY: default build clean test test_suite test_clean
+.PHONY: default build clean release test test_suite test_clean
 
 default: build
 
 build:
+	clang -Wall -Wextra -g -pedantic --std=c11 src/*.c -o clox
+
+release:
 	clang -Wall -Wextra -O2 -pedantic --std=c11 src/*.c -o clox
 
 test:
@@ -22,4 +25,4 @@ test_clean:
 	rm -rf spec
 
 clean:
-	rm -f clox
+	rm -rf clox clox.dSYM

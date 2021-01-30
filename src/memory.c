@@ -24,6 +24,7 @@ static void free_object(Obj* object) {
             ObjString* string = (ObjString*)object;
             FREE_ARRAY(char, string->chars, string->length + 1);
             FREE(ObjString, object);
+            break;
         }
         case OBJ_FUNCTION: {
             ObjFunction* function = (ObjFunction*)object;
