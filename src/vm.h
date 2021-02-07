@@ -23,6 +23,11 @@ typedef struct {
     Table globals;
     Table strings;
     Obj* objects;
+    size_t gray_count;
+    size_t gray_capacity;
+    Obj** gray_stack;
+    size_t bytes_allocated;
+    size_t gc_threshold;
 } VM;
 
 typedef enum {

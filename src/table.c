@@ -136,3 +136,20 @@ ObjString* table_find_string(Table* table, const char* chars, size_t length, siz
         idx = (idx + 1) % table->capacity;
     }
 }
+
+void table_mark_reachable(Table* table) {
+    for (size_t i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        gc_mark_object((Obj*)entry->key);
+        gc_mark_value(entry->value);
+    }
+}
+
+void table_remove_unreachable(Table* table) {
+    for (size_t i = 0; i < table->capacity; i++) {
+        Entry* entry = &table->entries[i];
+        if (entry->key != NULL && !entry->key->obj.is_marked) {
+            table_delete(table, entry->key);
+        }
+    }
+}

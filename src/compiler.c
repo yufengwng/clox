@@ -4,6 +4,7 @@
 
 #include "compiler.h"
 #include "scanner.h"
+#include "memory.h"
 #include "chunk.h"
 #include "value.h"
 
@@ -791,4 +792,12 @@ ObjFunction* compile(const char* source) {
 
     ObjFunction* function = end_compiler();
     return parser.had_error ? NULL : function;
+}
+
+void compiler_mark_roots() {
+    Compiler* compiler = current;
+    while (compiler != NULL) {
+        gc_mark_object((Obj*)compiler->function);
+        compiler = compiler->enclosing;
+    }
 }

@@ -39,8 +39,8 @@ static bool is_falsey(Value value) {
 }
 
 static void concatenate() {
-    ObjString* b = RAW_STRING(stack_pop());
-    ObjString* a = RAW_STRING(stack_pop());
+    ObjString* b = RAW_STRING(stack_peek(0));
+    ObjString* a = RAW_STRING(stack_peek(1));
 
     size_t length = a->length + b->length;
     char* chars = ALLOCATE(char, length + 1);
@@ -49,6 +49,8 @@ static void concatenate() {
     chars[length] = '\0';
 
     ObjString* result = take_string(chars, length);
+    stack_pop();
+    stack_pop();
     stack_push(BOX_OBJ(result));
 }
 
@@ -368,6 +370,11 @@ static Value clock_native(size_t arg_count, Value* args) {
 void init_vm() {
     stack_reset();
     vm.objects = NULL;
+    vm.gray_count = 0;
+    vm.gray_capacity = 0;
+    vm.gray_stack = NULL;
+    vm.bytes_allocated = 0;
+    vm.gc_threshold = 1024 * 1024;
     init_table(&vm.strings);
     init_table(&vm.globals);
     define_native("clock", clock_native);
