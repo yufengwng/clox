@@ -106,6 +106,11 @@ static bool call(ObjClosure* closure, size_t arg_count) {
 static bool call_value(Value callee, size_t arg_count) {
     if (IS_OBJ(callee)) {
         switch (OBJ_TYPE(callee)) {
+            case OBJ_CLASS: {
+                ObjClass* klass = RAW_CLASS(callee);
+                vm.stack_top[-arg_count - 1] = BOX_OBJ(new_instance(klass));
+                return true;
+            }
             case OBJ_CLOSURE:
                 return call(RAW_CLOSURE(callee), arg_count);
             case OBJ_NATIVE: {
@@ -251,6 +256,34 @@ static InterpretResult run() {
                 stack_push(*frame->closure->upvalues[slot]->location);
                 break;
             }
+            case OP_SET_PROPERTY: {
+                if (!IS_INSTANCE(stack_peek(1))) {
+                    runtime_error("Only instances have fields.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjInstance* instance = RAW_INSTANCE(stack_peek(1));
+                table_set(&instance->fields, READ_STRING(), stack_peek(0));
+                Value value = stack_pop();
+                stack_pop();
+                stack_push(value);
+                break;
+            }
+            case OP_GET_PROPERTY: {
+                if (!IS_INSTANCE(stack_peek(0))) {
+                    runtime_error("Only instances have properties.");
+                    return INTERPRET_RUNTIME_ERROR;
+                }
+                ObjInstance* instance = RAW_INSTANCE(stack_peek(0));
+                ObjString* name = READ_STRING();
+                Value value;
+                if (table_get(&instance->fields, name, &value)) {
+                    stack_pop();
+                    stack_push(value);
+                    break;
+                }
+                runtime_error("Undefined property '%s'.", name->chars);
+                return INTERPRET_RUNTIME_ERROR;
+            }
             case OP_EQUAL: {
                 Value b = stack_pop();
                 Value a = stack_pop();
@@ -351,6 +384,10 @@ static InterpretResult run() {
                 stack_push(result);
 
                 frame = &vm.frames[vm.frame_count - 1];
+                break;
+            }
+            case OP_CLASS: {
+                stack_push(BOX_OBJ(new_class(READ_STRING())));
                 break;
             }
         }

@@ -2,6 +2,7 @@
 
 #include "common.h"
 #include "chunk.h"
+#include "table.h"
 #include "value.h"
 
 typedef enum {
@@ -10,6 +11,8 @@ typedef enum {
     OBJ_UPVALUE,
     OBJ_CLOSURE,
     OBJ_NATIVE,
+    OBJ_CLASS,
+    OBJ_INSTANCE,
 } ObjType;
 
 struct Obj {
@@ -54,17 +57,32 @@ typedef struct {
     NativeFn function;
 } ObjNative;
 
+typedef struct {
+    Obj obj;
+    ObjString* name;
+} ObjClass;
+
+typedef struct {
+    Obj obj;
+    ObjClass* klass;
+    Table fields;
+} ObjInstance;
+
 #define OBJ_TYPE(value)     (RAW_OBJ(value)->type)
 #define IS_STRING(value)    is_obj_type(value, OBJ_STRING)
 #define IS_FUNCTION(value)  is_obj_type(value, OBJ_FUNCTION)
 #define IS_CLOSURE(value)   is_obj_type(value, OBJ_CLOSURE)
 #define IS_NATIVE(value)    is_obj_type(value, OBJ_NATIVE)
+#define IS_CLASS(value)     is_obj_type(value, OBJ_CLASS)
+#define IS_INSTANCE(value)  is_obj_type(value, OBJ_INSTANCE)
 
 #define RAW_STRING(value)   ((ObjString*)RAW_OBJ(value))
 #define RAW_CSTRING(value)  (((ObjString*)RAW_OBJ(value))->chars)
 #define RAW_FUNCTION(value) ((ObjFunction*)RAW_OBJ(value))
 #define RAW_CLOSURE(value)  ((ObjClosure*)RAW_OBJ(value))
 #define RAW_NATIVE(value)   (((ObjNative*)RAW_OBJ(value))->function)
+#define RAW_CLASS(value)    ((ObjClass*)RAW_OBJ(value))
+#define RAW_INSTANCE(value) ((ObjInstance*)RAW_OBJ(value))
 
 static inline bool is_obj_type(Value value, ObjType type) {
     return IS_OBJ(value) && RAW_OBJ(value)->type == type;
@@ -77,5 +95,7 @@ ObjFunction* new_function();
 ObjUpvalue* new_upvalue(Value* slot);
 ObjClosure* new_closure(ObjFunction* function);
 ObjNative* new_native(NativeFn function);
+ObjClass* new_class(ObjString* name);
+ObjInstance* new_instance(ObjClass* klass);
 
 void print_object(Value value);

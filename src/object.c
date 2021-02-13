@@ -101,6 +101,19 @@ ObjNative* new_native(NativeFn function) {
     return native;
 }
 
+ObjClass* new_class(ObjString* name) {
+    ObjClass* klass = ALLOCATE_OBJ(ObjClass, OBJ_CLASS);
+    klass->name = name;
+    return klass;
+}
+
+ObjInstance* new_instance(ObjClass* klass) {
+    ObjInstance* instance = ALLOCATE_OBJ(ObjInstance, OBJ_INSTANCE);
+    instance->klass = klass;
+    init_table(&instance->fields);
+    return instance;
+}
+
 static void print_function(ObjFunction* function) {
     if (function->name == NULL) {
         printf("<script>");
@@ -125,6 +138,12 @@ void print_object(Value value) {
             break;
         case OBJ_NATIVE:
             printf("<native fn>");
+            break;
+        case OBJ_CLASS:
+            printf("%s", RAW_CLASS(value)->name->chars);
+            break;
+        case OBJ_INSTANCE:
+            printf("%s instance", RAW_INSTANCE(value)->klass->name->chars);
             break;
     }
 }

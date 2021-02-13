@@ -65,6 +65,16 @@ static void free_object(Obj* object) {
             FREE(ObjNative, object);
             break;
         }
+        case OBJ_CLASS: {
+            FREE(ObjClass, object);
+            break;
+        }
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*)object;
+            free_table(&instance->fields);
+            FREE(ObjInstance, object);
+            break;
+        }
     }
 }
 
@@ -121,6 +131,17 @@ static void gc_blacken_object(Obj* object) {
     printf("\n");
 #endif
     switch (object->type) {
+        case OBJ_INSTANCE: {
+            ObjInstance* instance = (ObjInstance*)object;
+            gc_mark_object((Obj*)instance->klass);
+            table_mark_reachable(&instance->fields);
+            break;
+        }
+        case OBJ_CLASS: {
+            ObjClass* klass = (ObjClass*)object;
+            gc_mark_object((Obj*)klass->name);
+            break;
+        }
         case OBJ_CLOSURE: {
             ObjClosure* closure = (ObjClosure*)object;
             gc_mark_object((Obj*)closure->function);
