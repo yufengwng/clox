@@ -66,6 +66,8 @@ static void free_object(Obj* object) {
             break;
         }
         case OBJ_CLASS: {
+            ObjClass* klass = (ObjClass*)object;
+            free_table(&klass->methods);
             FREE(ObjClass, object);
             break;
         }
@@ -73,6 +75,10 @@ static void free_object(Obj* object) {
             ObjInstance* instance = (ObjInstance*)object;
             free_table(&instance->fields);
             FREE(ObjInstance, object);
+            break;
+        }
+        case OBJ_BOUND_METHOD: {
+            FREE(ObjBoundMethod, object);
             break;
         }
     }
@@ -131,6 +137,12 @@ static void gc_blacken_object(Obj* object) {
     printf("\n");
 #endif
     switch (object->type) {
+        case OBJ_BOUND_METHOD: {
+            ObjBoundMethod* bound = (ObjBoundMethod*)object;
+            gc_mark_value(bound->receiver);
+            gc_mark_object((Obj*)bound->method);
+            break;
+        }
         case OBJ_INSTANCE: {
             ObjInstance* instance = (ObjInstance*)object;
             gc_mark_object((Obj*)instance->klass);
@@ -140,6 +152,7 @@ static void gc_blacken_object(Obj* object) {
         case OBJ_CLASS: {
             ObjClass* klass = (ObjClass*)object;
             gc_mark_object((Obj*)klass->name);
+            table_mark_reachable(&klass->methods);
             break;
         }
         case OBJ_CLOSURE: {
@@ -177,6 +190,7 @@ static void gc_mark_roots() {
     }
     table_mark_reachable(&vm.globals);
     compiler_mark_roots();
+    gc_mark_object((Obj*)vm.init_string);
 }
 
 static void gc_trace_references() {

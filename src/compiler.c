@@ -54,6 +54,8 @@ typedef struct {
 
 typedef enum {
     TYPE_FUNCTION,
+    TYPE_INITIALIZER,
+    TYPE_METHOD,
     TYPE_SCRIPT,
 } FunctionType;
 
@@ -67,8 +69,14 @@ typedef struct Compiler {
     size_t scope_depth;
 } Compiler;
 
+typedef struct {
+    struct ClassCompiler* enclosing;
+    Token name;
+} ClassCompiler;
+
 Parser parser;  // singleton
 Compiler* current = NULL;
+ClassCompiler* current_class = NULL;
 
 // forward declarations
 static void expression();
@@ -98,8 +106,13 @@ static void init_compiler(Compiler* compiler, FunctionType type) {
     Local* local = &current->locals[current->local_count++];
     local->depth = 0;
     local->is_captured = false;
-    local->name.start = "";
-    local->name.length = 0;
+    if (type != TYPE_FUNCTION) {
+        local->name.start = "this";
+        local->name.length = 4;
+    } else {
+        local->name.start = "";
+        local->name.length = 0;
+    }
 }
 
 static void report_error(Token* token, const char* message) {
@@ -184,7 +197,11 @@ static void emit_constant(Value value) {
 }
 
 static void emit_return() {
-    emit_byte(OP_NIL);
+    if (current->type == TYPE_INITIALIZER) {
+        emit_bytes(OP_GET_LOCAL, 0);
+    } else {
+        emit_byte(OP_NIL);
+    }
     emit_byte(OP_RETURN);
 }
 
@@ -433,6 +450,14 @@ static void variable(bool can_assign) {
     named_variable(parser.previous, can_assign);
 }
 
+static void this_(bool can_assign) {
+    if (current_class == NULL) {
+        error("Can't use 'this' outside of a class.");
+        return;
+    }
+    variable(false);
+}
+
 static void literal(bool can_assign) {
     switch (parser.previous.type) {
         case TOKEN_NIL:   emit_byte(OP_NIL); break;
@@ -499,6 +524,10 @@ static void dot(bool can_assign) {
     if (can_assign && match(TOKEN_EQUAL)) {
         expression();
         emit_bytes(OP_SET_PROPERTY, name_idx);
+    } else if (match(TOKEN_LPAREN)) {
+        uint8_t arg_count = argument_list();
+        emit_bytes(OP_INVOKE, name_idx);
+        emit_byte(arg_count);
     } else {
         emit_bytes(OP_GET_PROPERTY, name_idx);
     }
@@ -609,6 +638,9 @@ static void return_statement() {
     if (match(TOKEN_SEMI)) {
         emit_return();
     } else {
+        if (current->type == TYPE_INITIALIZER) {
+            error("Can't return a value from an initializer.");
+        }
         expression();
         consume(TOKEN_SEMI, "Expect ';' after return value.");
         emit_byte(OP_RETURN);
@@ -688,6 +720,19 @@ static void function(FunctionType type) {
     }
 }
 
+static void method() {
+    consume(TOKEN_IDENT, "Expect method name.");
+    uint8_t idx = identifier_constant(&parser.previous);
+
+    FunctionType type = TYPE_METHOD;
+    if (parser.previous.length == 4 && memcmp(parser.previous.start, "init", 4) == 0) {
+        type = TYPE_INITIALIZER;
+    }
+    function(type);
+
+    emit_bytes(OP_METHOD, idx);
+}
+
 static void var_declaration() {
     uint8_t idx = parse_variable("Expect variable name.");
     if (match(TOKEN_EQUAL)) {
@@ -708,14 +753,27 @@ static void fun_declaration() {
 
 static void class_declaration() {
     consume(TOKEN_IDENT, "Expect class name.");
+    Token class_name = parser.previous;
     uint8_t name_idx = identifier_constant(&parser.previous);
     declare_variable();
 
     emit_bytes(OP_CLASS, name_idx);
     define_variable(name_idx);
 
+    ClassCompiler class_compiler;
+    class_compiler.name = class_name;
+    class_compiler.enclosing = current_class;
+    current_class = &class_compiler;
+
+    named_variable(class_name, false);
     consume(TOKEN_LBRACE, "Expect '{' before class body.");
+    while (!check(TOKEN_RBRACE) && !check(TOKEN_EOF)) {
+        method();
+    }
     consume(TOKEN_RBRACE, "Expect '}' after class body.");
+    emit_byte(OP_POP);
+
+    current_class = current_class->enclosing;
 }
 
 static void declaration() {
@@ -792,7 +850,7 @@ ParseRule rules[] = {
     [TOKEN_PRINT]  = {NULL,     NULL,   PREC_NONE},
     [TOKEN_RETURN] = {NULL,     NULL,   PREC_NONE},
     [TOKEN_SUPER]  = {NULL,     NULL,   PREC_NONE},
-    [TOKEN_THIS]   = {NULL,     NULL,   PREC_NONE},
+    [TOKEN_THIS]   = {this_,    NULL,   PREC_NONE},
     [TOKEN_TRUE]   = {literal,  NULL,   PREC_NONE},
     [TOKEN_VAR]    = {NULL,     NULL,   PREC_NONE},
     [TOKEN_WHILE]  = {NULL,     NULL,   PREC_NONE},
