@@ -501,7 +501,7 @@ static InterpretResult run() {
 #undef READ_BYTE
 }
 
-static Value clock_native(size_t arg_count, Value* args) {
+static Value clock_native(size_t UNUSED(arg_count), Value* UNUSED(args)) {
     return BOX_NUMBER((double)clock() / CLOCKS_PER_SEC);
 }
 

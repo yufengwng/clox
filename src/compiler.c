@@ -69,7 +69,7 @@ typedef struct Compiler {
     size_t scope_depth;
 } Compiler;
 
-typedef struct {
+typedef struct ClassCompiler {
     struct ClassCompiler* enclosing;
     Token name;
     bool has_superclass;
@@ -241,7 +241,7 @@ static void begin_scope() {
 static void end_scope() {
     current->scope_depth--;
     while (current->local_count > 0 &&
-            current->locals[current->local_count - 1].depth > current->scope_depth) {
+            current->locals[current->local_count - 1].depth > (int)current->scope_depth) {
         if (current->locals[current->local_count - 1].is_captured) {
             emit_byte(OP_CLOSE_UPVALUE);
         } else {
@@ -264,7 +264,7 @@ static ObjFunction* end_compiler() {
     return function;
 }
 
-static void binary(bool can_assign) {
+static void binary(bool UNUSED(can_assign)) {
     TokenType op_type = parser.previous.type;
 
     ParseRule* rule = get_rule(op_type);
@@ -286,7 +286,7 @@ static void binary(bool can_assign) {
     }
 }
 
-static void unary(bool can_assign) {
+static void unary(bool UNUSED(can_assign)) {
     TokenType op_type = parser.previous.type;
 
     parse_precedence(PREC_UNARY);
@@ -299,12 +299,12 @@ static void unary(bool can_assign) {
     }
 }
 
-static void number(bool can_assign) {
+static void number(bool UNUSED(can_assign)) {
     double value = strtod(parser.previous.start, NULL);
     emit_constant(BOX_NUMBER(value));
 }
 
-static void string(bool can_assign) {
+static void string(bool UNUSED(can_assign)) {
     size_t length = parser.previous.length - 2;
     emit_constant(BOX_OBJ(copy_string(parser.previous.start + 1, length)));
 }
@@ -397,7 +397,7 @@ static void declare_variable() {
     Token* name = &parser.previous;
     for (int i = current->local_count - 1; i >= 0; i--) {
         Local* local = &current->locals[i];
-        if (local->depth != -1 && local->depth < current->scope_depth) {
+        if (local->depth != -1 && local->depth < (int)current->scope_depth) {
             break;
         }
         if (identifier_equals(name, &local->name)) {
@@ -424,7 +424,7 @@ static uint8_t parse_variable(const char* error_message) {
     return identifier_constant(&parser.previous);
 }
 
-static void named_variable(Token name, can_assign) {
+static void named_variable(Token name, bool can_assign) {
     uint8_t get_op, set_op;
     int arg = resolve_local(current, &name);
     if (arg != -1) {
@@ -458,7 +458,7 @@ static Token synthetic_token(const char* text) {
     return token;
 }
 
-static void this_(bool can_assign) {
+static void this_(bool UNUSED(can_assign)) {
     if (current_class == NULL) {
         error("Can't use 'this' outside of a class.");
         return;
@@ -466,7 +466,7 @@ static void this_(bool can_assign) {
     variable(false);
 }
 
-static void literal(bool can_assign) {
+static void literal(bool UNUSED(can_assign)) {
     switch (parser.previous.type) {
         case TOKEN_NIL:   emit_byte(OP_NIL); break;
         case TOKEN_TRUE:  emit_byte(OP_TRUE); break;
@@ -476,7 +476,7 @@ static void literal(bool can_assign) {
     }
 }
 
-static void log_and(bool can_assign) {
+static void log_and(bool UNUSED(can_assign)) {
     size_t end_jump = emit_jump(OP_JUMP_IF_FALSE);
 
     emit_byte(OP_POP);
@@ -485,7 +485,7 @@ static void log_and(bool can_assign) {
     patch_jump(end_jump);
 }
 
-static void log_or(bool can_assign) {
+static void log_or(bool UNUSED(can_assign)) {
     size_t else_jump = emit_jump(OP_JUMP_IF_FALSE);
     size_t end_jump = emit_jump(OP_JUMP);
 
@@ -496,7 +496,7 @@ static void log_or(bool can_assign) {
     patch_jump(end_jump);
 }
 
-static void grouping(bool can_assign) {
+static void grouping(bool UNUSED(can_assign)) {
     expression();
     consume(TOKEN_RPAREN, "Expect ')' after expression.");
 }
@@ -520,12 +520,12 @@ static uint8_t argument_list() {
     return arg_count;
 }
 
-static void call(bool can_assign) {
+static void call(bool UNUSED(can_assign)) {
     uint8_t arg_count = argument_list();
     emit_bytes(OP_CALL, arg_count);
 }
 
-static void super_(bool can_assign) {
+static void super_(bool UNUSED(can_assign)) {
     if (current_class == NULL) {
         error("Can't use 'super' outside of a class.");
     } else if (!current_class->has_superclass) {

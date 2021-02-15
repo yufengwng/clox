@@ -6,6 +6,8 @@
 
 #define UINT8_COUNT (UINT8_MAX + 1)
 
+#define UNUSED(param) __attribute__((unused))param
+
 // #define DEBUG_LOG_GC
 // #define DEBUG_STRESS_GC
 // #define DEBUG_PRINT_CODE
