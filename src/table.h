@@ -10,12 +10,13 @@ typedef struct {
 
 typedef struct {
     size_t count;
-    size_t capacity;
+    size_t capacity_mask;
     Entry* entries;
 } Table;
 
 void init_table(Table* table);
 void free_table(Table* table);
+size_t table_current_capacity(Table* table);
 
 bool table_get(Table* table, ObjString* key, Value* value);
 bool table_set(Table* table, ObjString* key, Value value);
