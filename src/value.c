@@ -27,6 +27,12 @@ void varr_write(ValueArray* array, Value value) {
 }
 
 bool values_equal(Value a, Value b) {
+#ifdef NAN_BOXING
+    if (IS_NUMBER(a) && IS_NUMBER(b)) {
+        return RAW_NUMBER(a) == RAW_NUMBER(b);
+    }
+    return a == b;
+#else
     if (a.type != b.type) {
         return false;
     }
@@ -37,9 +43,21 @@ bool values_equal(Value a, Value b) {
         case VAL_OBJ:       return RAW_OBJ(a) == RAW_OBJ(b);
         default:            return false; // Unreachable.
     }
+#endif
 }
 
 void print_value(Value value) {
+#ifdef NAN_BOXING
+    if (IS_NIL(value)) {
+        printf("nil");
+    } else if (IS_BOOL(value)) {
+        printf(RAW_BOOL(value) ? "true" : "false");
+    } else if (IS_NUMBER(value)) {
+        printf("%g", RAW_NUMBER(value));
+    } else if (IS_OBJ(value)) {
+        print_object(value);
+    }
+#else
     switch (value.type) {
         case VAL_NIL:
             printf("nil");
@@ -54,4 +72,5 @@ void print_value(Value value) {
             print_object(value);
             break;
     }
+#endif
 }
